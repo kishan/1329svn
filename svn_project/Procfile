@@ -1,1 +1,0 @@
-web: gunicorn svn_project.wsgi
