@@ -37,6 +37,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     '992df4c7ad12c2.localhost.run', # allow hosting from localhost.run
+    'svn-1329.herokuapp.com', # allow hosting from Heroku
 ]
 
 
