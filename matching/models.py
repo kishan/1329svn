@@ -5,6 +5,7 @@ class CustomUser(models.Model):
     phone = models.TextField(max_length=20, blank=False)
     first_name = models.CharField(max_length=130, blank=True)
     last_name = models.CharField(max_length=130, blank=True)
+    fun_fact = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -19,4 +20,5 @@ class CustomUser(models.Model):
             'phone': self.phone,
             'first_name': self.first_name,
             'last_name': self.last_name,
+            'fun_fact': self.fun_fact,
         }
