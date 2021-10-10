@@ -1,10 +1,14 @@
 from django.http import HttpResponse
+from django.http import Http404
+from django.http import JsonResponse
 from django.conf import settings
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 
 from twilio.twiml.messaging_response import MessagingResponse
 from twilio.twiml.voice_response import VoiceResponse
+
+from matching.models import CustomUser
 
 from .lib_twilio import send_sms, make_call
 
@@ -64,3 +68,26 @@ def test_sms(request):
 def test_call(request):
     make_call(settings.TEST_NUMBER)
     return HttpResponse('call made')
+
+from django.core import serializers
+
+
+# get info for user
+def get_user(request, user_id):
+    try:
+        user = CustomUser.objects.get(pk=user_id)
+    except CustomUser.DoesNotExist:
+        raise Http404("Question does not exist")
+    
+    return JsonResponse(user.to_json())
+
+    # return serializers.serialize('json', user)
+    
+    # data = {
+    #     'id': user.id,
+    #     'phone': user.phone,
+    #     'first_name': user.first_name,
+    #     'last_name': user.last_name,
+    # }
+
+    # return JsonResponse(data)

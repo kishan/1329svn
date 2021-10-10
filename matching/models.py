@@ -13,3 +13,10 @@ class CustomUser(models.Model):
         else:
             return self.phone
     
+    def to_json(self):
+        return {
+            'id': self.id,
+            'phone': self.phone,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+        }
