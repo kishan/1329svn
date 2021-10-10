@@ -32,11 +32,15 @@ def add_user(request):
     print(params)
 
     user_id = params['user_id']
-    name = params['name']
+    first_name = params['first_name']
+    last_name = params['last_name']
     phone_num = params['phone_number']
     fun_fact = params['fun_fact']
 
     # Create new user in DB
+    # TODO: add validation to ensure no duplicate numbers
+    user = CustomUser(phone = phone_num, first_name = first_name, last_name = last_name, fun_fact = fun_fact)
+    user.save()
 
     # Find 3 random users -> lock them in as matches
     # rows = db_query(USERS)
@@ -44,7 +48,7 @@ def add_user(request):
 
     # send greeting text
     greeting_msg = f'''
-    Hey {name}! Welcome to 1329 SVN 🎉
+    Hey {first_name}! Welcome to 1329 SVN 🎉
     
 Tonight we will be playing a little game — in a few moments you will receive 3 fun facts about others at this party.
 
@@ -58,7 +62,7 @@ Fastest person to find all 3 matches wins a secret prize 🤫
 
     # if MATCH_PUBLISH (turned on after a certain time), send matches
 
-    return HttpResponse(json.dumps('"message":"user {name} added"'))
+    return HttpResponse(json.dumps({"message":f"user {first_name} added with user_id: {user.id}"}))
 
 
 # Endpoint for responding to incoming SMS messages to our Twilio number
@@ -123,17 +127,6 @@ def get_user(request, user_id):
     try:
         user = CustomUser.objects.get(pk=user_id)
     except CustomUser.DoesNotExist:
-        raise Http404("Question does not exist")
+        raise Http404("User does not exist")
     
     return JsonResponse(user.to_json())
-
-    # return serializers.serialize('json', user)
-    
-    # data = {
-    #     'id': user.id,
-    #     'phone': user.phone,
-    #     'first_name': user.first_name,
-    #     'last_name': user.last_name,
-    # }
-
-    # return JsonResponse(data)
