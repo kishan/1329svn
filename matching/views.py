@@ -1,3 +1,5 @@
+import json
+
 from django.http import HttpResponse
 from django.http import Http404
 from django.http import JsonResponse
@@ -14,6 +16,50 @@ from .lib_twilio import send_sms, make_call
 
 def index(request):
     return HttpResponse("Hello, world.")
+
+#@require_POST
+@csrf_exempt # TODO: address CSRF if deploying to production
+def add_user(request):
+
+    # Parse request -> extract name, phone number, and fun fact
+    print(request.POST)
+    body = request.__dict__['environ']['wsgi.input'].read()
+
+    print(body)
+
+    params = json.loads(body)
+
+    print(params)
+
+    user_id = params['user_id']
+    name = params['name']
+    phone_num = params['phone_number']
+    fun_fact = params['fun_fact']
+
+    # Create new user in DB
+
+    # Find 3 random users -> lock them in as matches
+    # rows = db_query(USERS)
+    # for i < 3: matches.append(randint(1, len(rows))) # excluding myself
+
+    # send greeting text
+    greeting_msg = f'''
+    Hey {name}! Welcome to 1329 SVN 🎉
+    
+Tonight we will be playing a little game — in a few moments you will receive 3 fun facts about others at this party.
+
+These are your matches for the night, and your job is to find them. Once you think you've found them, text us their name and we will try confirm if it's the right person!
+
+Fastest person to find all 3 matches wins a secret prize 🤫
+    '''
+    # Use actual number from form
+    send_sms(phone_num, greeting_msg)
+
+
+    # if MATCH_PUBLISH (turned on after a certain time), send matches
+
+    return HttpResponse(json.dumps('"message":"user {name} added"'))
+
 
 # Endpoint for responding to incoming SMS messages to our Twilio number
 @require_POST
