@@ -80,7 +80,7 @@ def sms_reply(request):
     elif incoming_msg=='3':
         msg_body='Have a wonderful day'
     else:
-        msg_body="""\nInvalid Option. \n\nWelcome to 1329 SVN! 🎉 \n\nReply with:\n1 to receive a GIF \n2 for an image \n3 for an SMS!"""
+        msg_body="""\n\n\nWelcome to 1329 SVN! 🎉 \n\nReply with:\n1 to receive a GIF \n2 for an image \n3 for an SMS!"""
 
     msg = response.message(str(msg_body))
     if media_link:
