@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.postgres.fields import ArrayField
 
 # Create your models here.
 class CustomUser(models.Model):
@@ -7,6 +8,8 @@ class CustomUser(models.Model):
     last_name = models.CharField(max_length=130, blank=True)
     fun_fact = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    num_matches_found = models.IntegerField(default=0, blank=True)
+    match_ids = ArrayField(models.CharField(max_length=260, blank=True), default=list)
 
     def __str__(self):
         if self.first_name:

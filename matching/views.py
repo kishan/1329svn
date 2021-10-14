@@ -1,4 +1,5 @@
 import json
+import random
 
 from django.http import HttpResponse
 from django.http import Http404
@@ -14,8 +15,59 @@ from matching.models import CustomUser
 
 from .lib_twilio import send_sms, make_call
 
+num_matches = 3
+
 def index(request):
     return HttpResponse("Hello, world.")
+
+@csrf_exempt # TODO: address CSRF if deploying to production
+def match_users(request):
+
+    # Only attempt to match users that haven't been matched yet.
+    users_not_matched = CustomUser.objects.filter(match_ids__len=0)
+
+    total_count = CustomUser.objects.count()
+
+    for user in users_not_matched:
+        # Generate 3 random matches (1 to N, where N is total) and save to DB
+        # TODO: refine this. Right now this biases towards "overmatching" on
+        # those who show up a little bit earlier because their user IDs will be available
+        # for selection in this process potentialy more than once.
+        matches = []
+        while len(matches) != 3:
+            match = random.randint(1, total_count)
+            if match == user.id:
+                # Exclude invalid self-matches.
+                continue
+            matches.append(match)
+
+        user.match_ids = matches
+        user.save()
+
+        # Find fun facts about matches and send text notifying about matches
+        fun_facts = []
+        for match_id in user.match_ids:
+            fun_facts.append(CustomUser.objects.get(pk=match_id).fun_fact)
+        send_matches(user, fun_facts)
+
+    return HttpResponse(f"matched all users!")
+
+def send_matches(user, fun_facts):
+
+    match_msg = f'''
+Here are the fun facts about your {num_matches} matches...
+    
+    '''
+    for i, fact in enumerate(fun_facts):
+        match_msg += "\n" + f"{i+1}. {fact}"
+
+    match_msg += "\n\nText us their names when you think you've found them!"
+
+    # send_sms(user.phone_num, match_msg)
+
+    print(match_msg)
+
+    return
 
 #@require_POST
 @csrf_exempt # TODO: address CSRF if deploying to production
@@ -58,7 +110,6 @@ Fastest person to find all 3 matches wins a secret prize 🤫
     '''
     # Use actual number from form
     send_sms(phone_num, greeting_msg)
-
 
     # if MATCH_PUBLISH (turned on after a certain time), send matches
 
@@ -130,3 +181,21 @@ def get_user(request, user_id):
         raise Http404("User does not exist")
     
     return JsonResponse(user.to_json())
+
+#
+# -------------------------- FOR TESTING PURPOSES ONLY ----------------------------
+#
+@csrf_exempt # TODO: address CSRF if deploying to production
+def generate_users(request):
+
+    mock_users = [('Doug', 'Q'), ('Kishan', 'P'), ('Abhishek', 'B')]
+    for user in mock_users:
+        user = CustomUser(first_name = user[0], last_name = user[1])
+        user.save()
+
+    return HttpResponse(f"created 3 users!")
+
+@csrf_exempt # TODO: address CSRF if deploying to production
+def unmatch_users(request):
+    CustomUser.objects.all().update(match_ids=list(), num_matches_found=0)   
+    return HttpResponse(f"unmatched all users!")
