@@ -8,6 +8,8 @@ from django.conf import settings
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 
+from fuzzywuzzy import fuzz
+
 from twilio.twiml.messaging_response import MessagingResponse
 from twilio.twiml.voice_response import VoiceResponse
 
@@ -94,10 +96,6 @@ def add_user(request):
     user = CustomUser(phone = phone_num, first_name = first_name, last_name = last_name, fun_fact = fun_fact)
     user.save()
 
-    # Find 3 random users -> lock them in as matches
-    # rows = db_query(USERS)
-    # for i < 3: matches.append(randint(1, len(rows))) # excluding myself
-
     # send greeting text
     greeting_msg = f'''
     Hey {first_name}! Welcome to 1329 SVN 🎉
@@ -106,12 +104,10 @@ Tonight we will be playing a little game — in a few moments you will receive 
 
 These are your matches for the night, and your job is to find them. Once you think you've found them, text us their name and we will try confirm if it's the right person!
 
-Fastest person to find all 3 matches wins a secret prize 🤫
+Fastest person to find all {num_matches} matches wins a secret prize 🤫
     '''
     # Use actual number from form
     send_sms(phone_num, greeting_msg)
-
-    # if MATCH_PUBLISH (turned on after a certain time), send matches
 
     return HttpResponse(json.dumps({"message":f"user {first_name} added with user_id: {user.id}"}))
 
@@ -120,6 +116,12 @@ Fastest person to find all 3 matches wins a secret prize 🤫
 @require_POST
 @csrf_exempt # TODO: address CSRF if deploying to production
 def sms_reply(request):
+
+    print(request)
+    print()
+    print(request.POST)
+    print()
+
     incoming_msg = request.POST.get('Body', '').lower()
 
     # create Twilio response
@@ -139,13 +141,28 @@ def sms_reply(request):
     elif incoming_msg=='3':
         msg_body='Have a wonderful day'
     else:
-        msg_body="""\n\n\nWelcome to 1329 SVN! 🎉 \n\nReply with:\n1 to receive a GIF \n2 for an image \n3 for an SMS!"""
+        msg_body="""\n\n\What's good to 1329 SVN! 🎉 \n\nReply with:\n1 to receive a GIF \n2 for an image \n3 for an SMS!"""
+
+        # Need to get phone number from Twilio request. Assume we have it for now
+        phone_number = ''
+        user = CustomUser.objects.filter(phone="phone_number")
+        for match_id in user.match_ids:
+            if is_match(CustomUser.objects.filter(pk=match_id), incoming_msg):
+                user.num_matches_found += 1
+                user.save()
+                # TODO: Send some sort of encouraging message back
+                # TODO: Share on TV that a new match has been found!
 
     msg = response.message(str(msg_body))
     if media_link:
         msg.media(media_link)
     
     return HttpResponse(response)
+
+# Uses fuzzy matching to see if user's guess matches their matches full name in DB.
+def is_match(user, guess_name):
+    
+    return fuzz.partial_ratio(f"{user.first_name} {user.last_name}".upper(), guess_name.upper()) > 0.90
 
 # Endpoint for responding to incoming calls to our Twilio number
 @csrf_exempt # TODO: address CSRF if deploying to production

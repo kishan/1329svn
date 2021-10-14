@@ -9,7 +9,7 @@ class CustomUser(models.Model):
     fun_fact = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     num_matches_found = models.IntegerField(default=0, blank=True)
-    match_ids = ArrayField(models.CharField(max_length=260, blank=True), default=list)
+    match_ids = ArrayField(models.IntegerField(blank=True), default=list)
 
     def __str__(self):
         if self.first_name:
