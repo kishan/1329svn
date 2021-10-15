@@ -253,6 +253,28 @@ def get_user(request, user_id):
     
     return JsonResponse(user.to_json())
 
+@csrf_exempt # TODO: address CSRF if deploying to production
+def get_leaderboard(request):
+
+    users = list(CustomUser.objects.all())
+    leaderboard = sorted(users, key = lambda x: (x.num_matches_found, sum([-s for s in x.match_found_times])), reverse=True)
+
+    leaderboard_json = []
+    for user in leaderboard:
+        found_times = []
+        for ts in user.match_found_times:
+            if ts == -1:
+                continue
+            found_times.append(datetime.datetime.utcfromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S'))
+        leaderboard_json.append({
+            "User": f'{user.first_name} {user.last_name}',
+            "Num Matches Found": user.num_matches_found,
+            "Times": found_times,
+        })
+
+    return HttpResponse(json.dumps(leaderboard_json))
+
+
 #
 # -------------------------- FOR TESTING PURPOSES ONLY ----------------------------
 #
