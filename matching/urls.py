@@ -19,5 +19,7 @@ urlpatterns = [
     path('match_users/', views.match_users, name='match_users'),
     path('unmatch_users/', views.unmatch_users, name='unmatch_users'),
     path('delete_users/', views.unmatch_users, name='delete_users'),
-    path('verify_guess/', views.verify_guess, name='verify_guess')
+    path('verify_guess/', views.verify_guess, name='verify_guess'),
+
+    path('mint_nft/', views.mint_nft, name='mint_nft'),
 ]
