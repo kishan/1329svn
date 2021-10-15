@@ -18,7 +18,9 @@ from twilio.twiml.voice_response import VoiceResponse
 from matching.models import CustomUser
 
 from .lib_twilio import send_sms, make_call
-from .nftlabs_sdk_python.nftlabs import NftlabsSdk
+# from .nftlabs_sdk_python.nftlabs import NftlabsSdk
+
+from nftlabs.sdk import NftlabsSdk
 
 def index(request):
     return HttpResponse("Hello, world.")
@@ -133,7 +135,7 @@ Text us their name when you think you've found them!'''
 def mint_nft(requesst):
     image_url = 'https://res.cloudinary.com/demo/image/upload/ar_1.0,c_thumb,g_face,w_0.6,z_0.7/r_max/co_black,e_outline/co_grey,e_shadow,x_40,y_55/actor.png'
 
-
+    print("hllo")
 
 """
 Handles all incoming text messages to the Twilio bot.

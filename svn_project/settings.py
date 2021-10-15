@@ -35,6 +35,7 @@ TEST_NUMBER = os.environ.get('TEST_NUMBER')
 DATABASE_NAME = os.environ.get('DATABASE_NAME')
 DATABASE_USER = os.environ.get('DATABASE_USER')
 DATABASE_PASSWORD = os.environ.get('DATABASE_PASSWORD')
+DATABASE_HOST = os.environ.get('DATABASE_HOST')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -100,7 +101,7 @@ DATABASES = {
         'NAME': DATABASE_NAME,
         'USER': DATABASE_USER,
         'PASSWORD': DATABASE_PASSWORD,
-        'HOST': '',
+        'HOST': DATABASE_HOST,
         'PORT': '',
     }
 }
