@@ -8,8 +8,11 @@ class CustomUser(models.Model):
     last_name = models.CharField(max_length=130, blank=True)
     fun_fact = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    
     num_matches_found = models.IntegerField(default=0, blank=True)
     match_ids = ArrayField(models.IntegerField(blank=True), default=list)
+    # Time (unix) at which matches were found, if any.
+    match_found_times = ArrayField(models.IntegerField(), default=list)
 
     def __str__(self):
         if self.first_name:

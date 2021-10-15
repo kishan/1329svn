@@ -1,5 +1,7 @@
 import json
 import random
+import time
+import datetime
 
 from django.http import HttpResponse
 from django.http import Http404
@@ -25,10 +27,12 @@ def index(request):
 @csrf_exempt # TODO: address CSRF if deploying to production
 def match_users(request):
 
+    # Build a map of all users still in the game.
+    all_users = CustomUser.objects.all()
+    all_user_ids = [user.id for user in all_users]
+
     # Only attempt to match users that haven't been matched yet.
     users_not_matched = CustomUser.objects.filter(match_ids__len=0)
-
-    total_count = CustomUser.objects.count()
 
     for user in users_not_matched:
         # Generate 3 random matches (1 to N, where N is total) and save to DB
@@ -37,9 +41,9 @@ def match_users(request):
         # for selection in this process potentialy more than once.
         matches = []
         while len(matches) != 3:
-            match = random.randint(1, total_count)
-            if match == user.id:
-                # Exclude invalid self-matches.
+            match = random.choice(all_user_ids)
+            if match == user.id or match in matches:
+                # Exclude invalid self-matches or matches that we've already made.
                 continue
             matches.append(match)
 
@@ -117,52 +121,102 @@ Fastest person to find all {num_matches} matches wins a secret prize 🤫
 @csrf_exempt # TODO: address CSRF if deploying to production
 def sms_reply(request):
 
-    print(request)
-    print()
-    print(request.POST)
-    print()
+    guess = request.POST.get('Body', '').lower()
+    phone_num = request.POST.get('From', '').lower()
+    phone_num = phone_num.replace('+1', '') # Remove country code if it's there
 
-    incoming_msg = request.POST.get('Body', '').lower()
+    msg_body, media_link = handle_sms_reply(guess, phone_num)
 
-    # create Twilio response
+    # Create and send back Twilio response.
     response = MessagingResponse()
-    
-    msg_body = ''
-    media_link = ''
-
-    if incoming_msg=='yo':
-        msg_body = 'yo dawg'
-    elif incoming_msg=='1':
-        msg_body = 'Gotta love a GIF!'
-        media_link= 'https://i.imgur.com/BwmtaWS.gif'
-    elif incoming_msg=='2':
-        msg_body='Enjoy this image!'
-        media_link='https://i.imgur.com/zNxhPjp.jpeg'
-    elif incoming_msg=='3':
-        msg_body='Have a wonderful day'
-    else:
-        msg_body="""\n\n\What's good to 1329 SVN! 🎉 \n\nReply with:\n1 to receive a GIF \n2 for an image \n3 for an SMS!"""
-
-        # Need to get phone number from Twilio request. Assume we have it for now
-        phone_number = ''
-        user = CustomUser.objects.filter(phone="phone_number")
-        for match_id in user.match_ids:
-            if is_match(CustomUser.objects.filter(pk=match_id), incoming_msg):
-                user.num_matches_found += 1
-                user.save()
-                # TODO: Send some sort of encouraging message back
-                # TODO: Share on TV that a new match has been found!
-
     msg = response.message(str(msg_body))
     if media_link:
         msg.media(media_link)
     
     return HttpResponse(response)
 
-# Uses fuzzy matching to see if user's guess matches their matches full name in DB.
-def is_match(user, guess_name):
+# Helper function for handling an SMS reply.
+def handle_sms_reply(guess, phone_num):
+
+    # Try to fetch user from DB first.
+    user = None
+    try:
+        user = CustomUser.objects.filter(phone=phone_num)[0]
+    except CustomUser.DoesNotExist:
+        raise Http404("User does not exist")
     
-    return fuzz.partial_ratio(f"{user.first_name} {user.last_name}".upper(), guess_name.upper()) > 0.90
+    msg_body = ''
+    media_link = ''
+    
+
+    if not user.match_ids or len(user.match_ids) == 0:
+        # Matches have not been generated yet for user. Don't attempt to evaluate guess.
+        msg_body="""We'll be generating matches soon. Have a drink on us in the meantime 🍹"""
+        media_link = 'https://c.tenor.com/wdv_JiOkBGgAAAAC/cheers-lets-drink.gif'
+        return msg_body, media_link
+
+    best_match = None
+    best_match_idx = -1
+    best_score = -1
+
+    for i, match_id in enumerate(user.match_ids):
+
+        # Compute a score on the match.
+        potential_match = CustomUser.objects.get(pk=int(match_id))
+        score = get_match_score(potential_match, guess)
+
+        print(f"Matching {user} against {potential_match}: {score}...")
+            
+        if score > best_score:
+            best_score = score
+            best_match = potential_match
+            best_match_idx = i
+
+    print(f"Best match found on {best_match}: {best_score}...")
+
+    if best_score > 90:
+        # Consider this a match. Log current time so we can track who
+        # found their matches the fastest.
+        t = datetime.datetime.now(datetime.timezone.utc)
+        if len(user.match_found_times) > 0 and user.match_found_times[best_match_idx] != -1:
+            # To handle repeated entry of the same correct guess.
+            msg_body="""Looks like you already found this match..."""
+            return msg_body, media_link
+
+        if not user.match_found_times or len(user.match_found_times) == 0:
+            # Initiate new array of match found times.
+            user.match_found_times = [-1 for i in range(num_matches)]
+
+        user.match_found_times[best_match_idx] = int(time.time())
+        user.num_matches_found += 1
+        user.save()
+        
+        if user.num_matches_found == 1:
+            msg_body="""That's correct! Great start to the night. 2 more to go!"""
+
+        elif user.num_matches_found == 2:
+            msg_body="""Bingo! Just one more now..."""
+
+        elif user.num_matches_found == 3:
+            msg_body="""A,B,C...it's easy as 1,2,3...and that's the number of matches you found! Congratulations on finding all your matches!!! 👏 Thanks for playing and enjoy the rest of the party 🎊"""
+            media_link='https://i.pinimg.com/originals/bd/23/5c/bd235c84724d5eb04b5cfe39028e936c.gif'
+
+
+    elif best_score > 80:
+        # Send an encouraging message.
+        msg_body="""That was close! Check your spelling and try again?"""
+
+    else:
+        msg_body="""Not quite. You might want to expand your search a little..."""
+
+            # TODO: Share on TV that a new match has been found!
+
+    return msg_body, media_link
+
+# Uses fuzzy matching to see if user's guess matches their matches full name in DB.
+def get_match_score(user, guess_name):
+    
+    return fuzz.ratio(f"{user.first_name}".upper(), guess_name.upper())
 
 # Endpoint for responding to incoming calls to our Twilio number
 @csrf_exempt # TODO: address CSRF if deploying to production
@@ -205,12 +259,31 @@ def get_user(request, user_id):
 @csrf_exempt # TODO: address CSRF if deploying to production
 def generate_users(request):
 
-    mock_users = [('Doug', 'Q'), ('Kishan', 'P'), ('Abhishek', 'B')]
+    CustomUser.objects.all().delete()
+
+    mock_users = [
+        ('Doug', 'Q', '2039807851'), 
+        ('Kishan', 'P', '9783823789'),
+        ('Abhishek', 'B', '1'),
+        ('George', 'P', '2'),
+        ('Anand', 'T', '3'),
+    ]
     for user in mock_users:
-        user = CustomUser(first_name = user[0], last_name = user[1])
+        user = CustomUser(first_name = user[0], last_name = user[1], phone = user[2])
+        user.match_found_times = [-1 for i in range(num_matches)]
         user.save()
 
-    return HttpResponse(f"created 3 users!")
+    return HttpResponse(f"created users!")
+
+@require_POST
+@csrf_exempt # TODO: address CSRF if deploying to production
+def verify_guess(request):
+
+    body = json.loads(request.__dict__['environ']['wsgi.input'].read())
+    msg_body, _ = handle_sms_reply(body["guess"], body["phone_num"])
+
+    return HttpResponse(msg_body)
+
 
 @csrf_exempt # TODO: address CSRF if deploying to production
 def unmatch_users(request):
