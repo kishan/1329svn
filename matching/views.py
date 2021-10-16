@@ -3,6 +3,7 @@ import random
 import time
 import datetime
 
+import os
 from django.http import HttpResponse
 from django.http import Http404
 from django.http import JsonResponse
@@ -21,6 +22,15 @@ from .lib_twilio import send_sms, make_call
 # from .nftlabs_sdk_python.nftlabs import NftlabsSdk
 
 from nftlabs.sdk import NftlabsSdk
+from nftlabs.options import SdkOptions
+from nftlabs.modules import nft_types
+import io
+
+from PIL import Image, ImageDraw, ImageFont, ImageSequence
+
+from .utils.image_generation import generate_match_nft
+from .utils.file_upload import upload_fileobj_sync
+from .utils.nft.minting import mint_nft_util
 
 def index(request):
     return HttpResponse("Hello, world.")
@@ -132,14 +142,39 @@ Text us their name when you think you've found them!'''
     return
 
 @csrf_exempt # TODO: address CSRF if deploying to production
-def mint_nft(requesst):
-    image_url = 'https://res.cloudinary.com/demo/image/upload/ar_1.0,c_thumb,g_face,w_0.6,z_0.7/r_max/co_black,e_outline/co_grey,e_shadow,x_40,y_55/actor.png'
+def mint_nft(request):
+    user1_name = "Kishan Patel"
+    user2_name = "Douglas Qian"
 
-    print("hllo")
+
+    in_mem_file = generate_match_nft(
+        user1_name=user1_name,
+        user2_name=user2_name
+    )
+
+    print("Got in-mem-file")
+
+    # Upload image to s3
+    url = upload_fileobj_sync(
+        in_mem_file=in_mem_file,
+        match_unique_id=f"{user1_name} <> {user2_name}"
+    )
+
+    print(f"URL: {url}")
+
+    ret_val = mint_nft_util(
+        image_url=url,
+        user1_name=user1_name,
+        user2_name=user2_name
+    )
+
+    return JsonResponse({"status": "Lets go"}, status=200)
+
 
 """
 Handles all incoming text messages to the Twilio bot.
 """
+
 # Endpoint for responding to incoming SMS messages to our Twilio number
 @require_POST
 @csrf_exempt # TODO: address CSRF if deploying to production

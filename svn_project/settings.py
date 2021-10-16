@@ -37,6 +37,15 @@ DATABASE_USER = os.environ.get('DATABASE_USER')
 DATABASE_PASSWORD = os.environ.get('DATABASE_PASSWORD')
 DATABASE_HOST = os.environ.get('DATABASE_HOST')
 
+CRYPTO_WALLET_ADDRESS = os.environ.get('CRYPTO_WALLET_ADDRESS')
+CRYPTO_NFT_ADDRESS = os.environ.get('CRYPTO_NFT_ADDRESS')
+CRYPTO_PRIVATE_KEY = os.environ.get('CRYPTO_PRIVATE_KEY')
+CRYPTO_HTTP_NODE_ENDPOINT = os.environ.get('CRYPTO_HTTP_NODE_ENDPOINT')
+
+AWS_ACCESS_KEY = os.environ.get('AWS_ACCESS_KEY')
+AWS_SECRET_KEY = os.environ.get('AWS_SECRET_KEY')
+
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
