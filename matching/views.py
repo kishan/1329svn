@@ -143,6 +143,7 @@ Text us their name when you think you've found them!'''
 
 @csrf_exempt # TODO: address CSRF if deploying to production
 def mint_nft(request):
+
     user1_name = "Kishan Patel"
     user2_name = "Douglas Qian"
 
