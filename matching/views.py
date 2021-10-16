@@ -39,8 +39,14 @@ def add_user(request):
     phone_num = params['phone_number']
     fun_fact = params['fun_fact']
 
+    phone_num_clean = ''
+    for char in phone_num:
+        if not char.isdigit():
+            continue
+        phone_num_clean += char
+
     # Create new user in DB
-    user = CustomUser(phone = phone_num, first_name = first_name, last_name = last_name, fun_fact = fun_fact)
+    user = CustomUser(phone = phone_num_clean, first_name = first_name, last_name = last_name, fun_fact = fun_fact)
     user.save()
 
     # send greeting text
@@ -128,6 +134,7 @@ Handles all incoming text messages to the Twilio bot.
 @require_POST
 @csrf_exempt # TODO: address CSRF if deploying to production
 def sms_reply(request):
+
     incoming_msg = request.POST.get('Body', '').lower()
     if incoming_msg == "yo":
         response = MessagingResponse()
@@ -140,6 +147,8 @@ def sms_reply(request):
 
     print("Twilio body: ", incoming_msg)
     print("Twilio phone #: ", phone_num)
+    print()
+    print(request.__dict__)
 
     msg_body, media_link = handle_sms_reply(incoming_msg, phone_num)
 
