@@ -264,7 +264,36 @@ def handle_sms_reply(guess, phone_num):
         time_diff = (user.match_found_times[best_match_idx] - user.match_create_times[best_match_idx]) / 60
 
         msg_body="Congratulations on finding your match in {:.1f} minutes!!! 👏 Thanks for playing 🎊".format(time_diff)
-        media_link='https://i.pinimg.com/originals/bd/23/5c/bd235c84724d5eb04b5cfe39028e936c.gif'    
+        # media_link='https://i.pinimg.com/originals/bd/23/5c/bd235c84724d5eb04b5cfe39028e936c.gif'
+
+        u1_first_name = user.first_name
+        u1_last_name = user.last_name
+        u2_first_name = best_match.first_name
+        u2_last_name = best_match.last_name
+
+        u1_name = f"{u1_first_name} {u1_last_name}"
+        u2_name = f"{u2_first_name} {u2_last_name}"
+
+        in_mem_file = generate_match_nft(
+            user1_name=u1_name,
+            user2_name=u2_name
+        )
+
+        # Upload image to s3
+        media_link = upload_fileobj_sync(
+            in_mem_file=in_mem_file,
+            match_unique_id=f"{u1_name} <> {u2_name}"
+        )
+
+        try:
+            ret_val = mint_nft_util(
+                image_url=media_link,
+                user1_name=u1_name,
+                user2_name=u2_name
+            )
+        except Exception as e:
+            print(f"Exception while minting: {str(e)}")
+
 
     elif best_score > 80:
         # Send an encouraging message.

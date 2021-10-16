@@ -16,6 +16,8 @@ class CustomUser(models.Model):
     match_found_times = ArrayField(models.IntegerField(), default=list)
     num_matched_to_me = models.IntegerField(default=0, blank=True)
 
+    nft_id = models.IntegerField(blank=True, null=True)
+
     def __str__(self):
         if self.first_name:
             return self.first_name + " " + self.last_name
