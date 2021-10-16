@@ -124,7 +124,7 @@ Text us their name when you think you've found them!'''
 
     print(match_msg)
 
-    send_sms(user.phone_num, match_msg)
+    send_sms(user.phone, match_msg)
     return
 
 """
