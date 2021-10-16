@@ -138,6 +138,9 @@ def sms_reply(request):
     phone_num = request.POST.get('From', '').lower()
     phone_num = phone_num.replace('+1', '') # Remove country code if it's there
 
+    print("Twilio body: ", incoming_msg)
+    print("Twilio phone #: ", phone_num)
+
     msg_body, media_link = handle_sms_reply(incoming_msg, phone_num)
 
     # Create and send back Twilio response.
