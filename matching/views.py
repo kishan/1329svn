@@ -282,7 +282,7 @@ def handle_sms_reply(guess, phone_num):
         # Upload image to s3
         media_link = upload_fileobj_sync(
             in_mem_file=in_mem_file,
-            match_unique_id=f"{u1_name} <> {u2_name}"
+            match_unique_id=f"{user.id}_{best_match.id}"
         )
 
         try:
@@ -291,6 +291,10 @@ def handle_sms_reply(guess, phone_num):
                 user1_name=u1_name,
                 user2_name=u2_name
             )
+
+            user.nft_id = ret_val.id
+            user.save()
+
         except Exception as e:
             print(f"Exception while minting: {str(e)}")
 
