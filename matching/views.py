@@ -98,6 +98,7 @@ def match_single_user(user):
             # Exclude invalid self-matches or matches that we've already made.
             continue
         match_id = potential_match.id
+        break
 
     user.match_ids = [match_id]
     user.match_create_times = [int(time.time())]
