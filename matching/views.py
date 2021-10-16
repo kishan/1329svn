@@ -120,12 +120,17 @@ Fastest person to find all {num_matches} matches wins a secret prize 🤫
 @require_POST
 @csrf_exempt # TODO: address CSRF if deploying to production
 def sms_reply(request):
+    incoming_msg = request.POST.get('Body', '').lower()
+    if incoming_msg == "yo":
+        response = MessagingResponse()
+        msg_body = "yoooo"
+        msg = response.message(str(msg_body))
+        return HttpResponse(response)
 
-    guess = request.POST.get('Body', '').lower()
     phone_num = request.POST.get('From', '').lower()
     phone_num = phone_num.replace('+1', '') # Remove country code if it's there
 
-    msg_body, media_link = handle_sms_reply(guess, phone_num)
+    msg_body, media_link = handle_sms_reply(incoming_msg, phone_num)
 
     # Create and send back Twilio response.
     response = MessagingResponse()
