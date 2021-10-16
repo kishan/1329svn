@@ -55,7 +55,7 @@ def add_user(request):
     
 Tonight we will be playing a little game — in a few moments you will receive a fun fact about someone else at this party.
 
-Your job is to find who you've been matched to. Once you think you've found them, text us their name and we will try confirm if it's the right person!
+Your job is to find who you've been matched to. Once you think you've found them, text us their first name and we will confirm if it's the right person!
 
 Those who find their match get a nice prize at the end... 🤫
     '''
