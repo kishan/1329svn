@@ -12,7 +12,9 @@ class CustomUser(models.Model):
     num_matches_found = models.IntegerField(default=0, blank=True)
     match_ids = ArrayField(models.IntegerField(blank=True), default=list)
     # Time (unix) at which matches were found, if any.
+    match_create_times = ArrayField(models.IntegerField(), default=list)
     match_found_times = ArrayField(models.IntegerField(), default=list)
+    num_matched_to_me = models.IntegerField(default=0, blank=True)
 
     def __str__(self):
         if self.first_name:

@@ -19,84 +19,27 @@ from matching.models import CustomUser
 
 from .lib_twilio import send_sms, make_call
 
-num_matches = 3
-
 def index(request):
     return HttpResponse("Hello, world.")
 
-@csrf_exempt # TODO: address CSRF if deploying to production
-def match_users(request):
-
-    # Build a map of all users still in the game.
-    all_users = CustomUser.objects.all()
-    all_user_ids = [user.id for user in all_users]
-
-    # Only attempt to match users that haven't been matched yet.
-    users_not_matched = CustomUser.objects.filter(match_ids__len=0)
-
-    for user in users_not_matched:
-        # Generate 3 random matches (1 to N, where N is total) and save to DB
-        # TODO: refine this. Right now this biases towards "overmatching" on
-        # those who show up a little bit earlier because their user IDs will be available
-        # for selection in this process potentialy more than once.
-        matches = []
-        while len(matches) != 3:
-            match = random.choice(all_user_ids)
-            if match == user.id or match in matches:
-                # Exclude invalid self-matches or matches that we've already made.
-                continue
-            matches.append(match)
-
-        user.match_ids = matches
-        user.save()
-
-        # Find fun facts about matches and send text notifying about matches
-        fun_facts = []
-        for match_id in user.match_ids:
-            fun_facts.append(CustomUser.objects.get(pk=match_id).fun_fact)
-        send_matches(user, fun_facts)
-
-    return HttpResponse(f"matched all users!")
-
-def send_matches(user, fun_facts):
-
-    match_msg = f'''
-Here are the fun facts about your {num_matches} matches...
-    
-    '''
-    for i, fact in enumerate(fun_facts):
-        match_msg += "\n" + f"{i+1}. {fact}"
-
-    match_msg += "\n\nText us their names when you think you've found them!"
-
-    # send_sms(user.phone_num, match_msg)
-
-    print(match_msg)
-
-    return
-
+"""
+Handles a new form submission by creating user in DB and sending a greeting message.
+Will also generate matches if that part of that night has started.
+"""
 #@require_POST
 @csrf_exempt # TODO: address CSRF if deploying to production
 def add_user(request):
 
     # Parse request -> extract name, phone number, and fun fact
-    print(request.POST)
     body = request.__dict__['environ']['wsgi.input'].read()
 
-    print(body)
-
     params = json.loads(body)
-
-    print(params)
-
-    user_id = params['user_id']
     first_name = params['first_name']
     last_name = params['last_name']
     phone_num = params['phone_number']
     fun_fact = params['fun_fact']
 
     # Create new user in DB
-    # TODO: add validation to ensure no duplicate numbers
     user = CustomUser(phone = phone_num, first_name = first_name, last_name = last_name, fun_fact = fun_fact)
     user.save()
 
@@ -104,18 +47,83 @@ def add_user(request):
     greeting_msg = f'''
     Hey {first_name}! Welcome to 1329 SVN 🎉
     
-Tonight we will be playing a little game — in a few moments you will receive 3 fun facts about others at this party.
+Tonight we will be playing a little game — in a few moments you will receive a fun fact about someone else at this party.
 
-These are your matches for the night, and your job is to find them. Once you think you've found them, text us their name and we will try confirm if it's the right person!
+Your job is to find who you've been matched to. Once you think you've found them, text us their name and we will try confirm if it's the right person!
 
-Fastest person to find all {num_matches} matches wins a secret prize 🤫
+Those who find their match get a nice prize at the end... 🤫
     '''
     # Use actual number from form
     send_sms(phone_num, greeting_msg)
 
+    users_matched = CustomUser.objects.filter(match_ids__len__gt=0)
+    if len(users_matched) > 0:
+        # User matching has initiated. Match every new user.
+        match_single_user(user)
+
     return HttpResponse(json.dumps({"message":f"user {first_name} added with user_id: {user.id}"}))
 
+"""
+Matches all users that haven't been matched yet.
+"""
+@csrf_exempt # TODO: address CSRF if deploying to production
+def match_users(request):
 
+    # Only attempt to match users that haven't been matched yet.
+    users_not_matched = CustomUser.objects.filter(match_ids__len=0)
+
+    for user in users_not_matched:
+        match_single_user(user)
+
+    return HttpResponse(f"matched all users!")
+
+"""
+Finds match for a single user and saves result to DB.
+Takes as input user and assumes that user currently has no matches.
+"""
+def match_single_user(user):
+
+    # Generate a list of all users sorted by the number of matches
+    all_users_by_match = sorted(CustomUser.objects.all(), key = lambda x: x.num_matched_to_me)
+
+    match_id = None
+    for potential_match in all_users_by_match:
+        if potential_match.id == user.id:
+            # Exclude invalid self-matches or matches that we've already made.
+            continue
+        match_id = potential_match.id
+
+    user.match_ids = [match_id]
+    user.match_create_times = [int(time.time())]
+    user.save()
+
+    matched_user = CustomUser.objects.get(pk=match_id)
+    matched_user.num_matched_to_me += 1
+    matched_user.save()
+
+    # Find fun fact about match and send text notification
+    return send_matches(user, matched_user)
+
+"""
+Given a user A and who they're matched to (user B), send SMS to user A with fun fact about user B.
+"""
+def send_matches(user, matched_user):
+
+    match_msg = f'''
+Here is the fun fact about your match:
+
+🤔 {matched_user.fun_fact}
+
+Text us their name when you think you've found them!'''
+
+    print(match_msg)
+
+    send_sms(user.phone_num, match_msg)
+    return
+
+"""
+Handles all incoming text messages to the Twilio bot.
+"""
 # Endpoint for responding to incoming SMS messages to our Twilio number
 @require_POST
 @csrf_exempt # TODO: address CSRF if deploying to production
@@ -135,7 +143,9 @@ def sms_reply(request):
     
     return HttpResponse(response)
 
-# Helper function for handling an SMS reply.
+"""
+Helper function for handling an SMS reply.
+"""
 def handle_sms_reply(guess, phone_num):
 
     # Try to fetch user from DB first.
@@ -147,7 +157,6 @@ def handle_sms_reply(guess, phone_num):
     
     msg_body = ''
     media_link = ''
-    
 
     if not user.match_ids or len(user.match_ids) == 0:
         # Matches have not been generated yet for user. Don't attempt to evaluate guess.
@@ -177,30 +186,23 @@ def handle_sms_reply(guess, phone_num):
     if best_score > 90:
         # Consider this a match. Log current time so we can track who
         # found their matches the fastest.
-        t = datetime.datetime.now(datetime.timezone.utc)
         if len(user.match_found_times) > 0 and user.match_found_times[best_match_idx] != -1:
             # To handle repeated entry of the same correct guess.
-            msg_body="""Looks like you already found this match..."""
+            msg_body="""Looks like you already found your match! Go enjoy the party!"""
             return msg_body, media_link
 
         if not user.match_found_times or len(user.match_found_times) == 0:
             # Initiate new array of match found times.
-            user.match_found_times = [-1 for i in range(num_matches)]
+            user.match_found_times = [-1]
 
         user.match_found_times[best_match_idx] = int(time.time())
         user.num_matches_found += 1
         user.save()
         
-        if user.num_matches_found == 1:
-            msg_body="""That's correct! Great start to the night. 2 more to go!"""
+        time_diff = (user.match_found_times[best_match_idx] - user.match_create_times[best_match_idx]) / 60
 
-        elif user.num_matches_found == 2:
-            msg_body="""Bingo! Just one more now..."""
-
-        elif user.num_matches_found == 3:
-            msg_body="""A,B,C...it's easy as 1,2,3...and that's the number of matches you found! Congratulations on finding all your matches!!! 👏 Thanks for playing and enjoy the rest of the party 🎊"""
-            media_link='https://i.pinimg.com/originals/bd/23/5c/bd235c84724d5eb04b5cfe39028e936c.gif'
-
+        msg_body="Congratulations on finding your match in {:.1f} minutes!!! 👏 Thanks for playing 🎊".format(time_diff)
+        media_link='https://i.pinimg.com/originals/bd/23/5c/bd235c84724d5eb04b5cfe39028e936c.gif'    
 
     elif best_score > 80:
         # Send an encouraging message.
@@ -208,8 +210,6 @@ def handle_sms_reply(guess, phone_num):
 
     else:
         msg_body="""Not quite. You might want to expand your search a little..."""
-
-            # TODO: Share on TV that a new match has been found!
 
     return msg_body, media_link
 
@@ -240,9 +240,6 @@ def test_sms(request):
 def test_call(request):
     make_call(settings.TEST_NUMBER)
     return HttpResponse('call made')
-
-from django.core import serializers
-
 
 # get info for user
 def get_user(request, user_id):
@@ -281,7 +278,7 @@ def get_leaderboard(request):
 @csrf_exempt # TODO: address CSRF if deploying to production
 def generate_users(request):
 
-    CustomUser.objects.all().delete()
+    delete_users(request)
 
     mock_users = [
         ('Doug', 'Q', '2039807851'), 
@@ -292,7 +289,7 @@ def generate_users(request):
     ]
     for user in mock_users:
         user = CustomUser(first_name = user[0], last_name = user[1], phone = user[2])
-        user.match_found_times = [-1 for i in range(num_matches)]
+        user.match_found_times = [-1]
         user.save()
 
     return HttpResponse(f"created users!")
@@ -306,6 +303,9 @@ def verify_guess(request):
 
     return HttpResponse(msg_body)
 
+@csrf_exempt
+def delete_users(request):
+    CustomUser.objects.all().delete()
 
 @csrf_exempt # TODO: address CSRF if deploying to production
 def unmatch_users(request):
