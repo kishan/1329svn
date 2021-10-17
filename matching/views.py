@@ -264,7 +264,7 @@ def handle_sms_reply(guess, phone_num):
         
         time_diff = (user.match_found_times[best_match_idx] - user.match_create_times[best_match_idx]) / 60
 
-        msg_body="Congratulations on finding your match in {:.1f} minutes!!! 👏 Thanks for playing 🎊".format(time_diff)
+        msg_body="Congratulations on finding your match in {:.1f} minutes!!! 👏".format(time_diff)
         # media_link='https://i.pinimg.com/originals/bd/23/5c/bd235c84724d5eb04b5cfe39028e936c.gif'
 
         u1_first_name = user.first_name
@@ -286,18 +286,20 @@ def handle_sms_reply(guess, phone_num):
             match_unique_id=f"{user.id}_{best_match.id}"
         )
 
-        try:
-            ret_val = mint_nft_util(
-                image_url=media_link,
-                user1_name=u1_name,
-                user2_name=u2_name
-            )
+        msg_body+="\nHere's an NFT we created to commerate this 🎊. More instructions on how to redeem this coming soon..."
 
-            user.nft_id = ret_val.id
-            user.save()
+        # try:
+        #     ret_val = mint_nft_util(
+        #         image_url=media_link,
+        #         user1_name=u1_name,
+        #         user2_name=u2_name
+        #     )
 
-        except Exception as e:
-            print(f"Exception while minting: {str(e)}")
+        #     user.nft_id = ret_val.id
+        #     user.save()
+
+        # except Exception as e:
+        #     print(f"Exception while minting: {str(e)}")
 
 
     elif best_score > 80:
