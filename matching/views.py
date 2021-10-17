@@ -407,3 +407,10 @@ def delete_users(request):
 def unmatch_users(request):
     CustomUser.objects.all().update(match_ids=list(), num_matches_found=0)   
     return HttpResponse(f"unmatched all users!")
+
+@csrf_exempt # TODO: address CSRF if deploying to production
+def test_sms_reply(request):
+
+    send_sms("2039807851", "Hello test", "https://1329svn.s3.filebase.com/5_4.gif")
+
+    return HttpResponse("test response")

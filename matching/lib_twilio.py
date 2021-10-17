@@ -5,12 +5,14 @@ from twilio.rest import Client
 # Set up Twilio client
 client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
 
-def send_sms(to_number, body):
+def send_sms(to_number, body, media_link=None):
     try:
         message = client.messages.create(
             to=to_number,
             from_=settings.TWILIO_NUMBER,
+            media_url=media_link,
             body=body)
+
         print("SID of message sent: " + message.sid)
         return message.sid
     except TwilioRestException as e:

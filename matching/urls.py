@@ -22,4 +22,5 @@ urlpatterns = [
     path('verify_guess/', views.verify_guess, name='verify_guess'),
 
     path('mint_nft/', views.mint_nft, name='mint_nft'),
+    path('test_sms_reply/', views.test_sms_reply, name='test_sms_reply'),
 ]
