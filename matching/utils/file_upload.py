@@ -25,7 +25,8 @@ def upload_fileobj_sync(in_mem_file, match_unique_id):
         bucket_name,
         key,
         ExtraArgs={
-            'ACL': 'public-read'
+            'ACL': 'public-read',
+            'ContentType': 'image/gif',
         }
     )
 
