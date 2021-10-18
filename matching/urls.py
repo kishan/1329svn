@@ -23,4 +23,5 @@ urlpatterns = [
 
     path('mint_nft/', views.mint_nft, name='mint_nft'),
     path('test_sms_reply/', views.test_sms_reply, name='test_sms_reply'),
+    path('collect_money/', views.collect_money, name='collect_money')
 ]

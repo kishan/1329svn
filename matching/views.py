@@ -416,3 +416,23 @@ def test_sms_reply(request):
     send_sms("2039807851", "Hello test", "https://1329svn.s3.filebase.com/5_4.gif")
 
     return HttpResponse("test response")
+
+
+@csrf_exempt # TODO: address CSRF if deploying to production
+def collect_money(request):
+
+    msg = """Hey everyone 👋
+    
+Thanks for joining us last night! We had a blast putting this together for you all, and it was great seeing people meeting in-person again. There's something magical about in-person, and we definitely want to double-downa and host more events like the one last night.
+
+Getting all the ingredients for Kishan's fancy bartending class was definitely not cheap though, and we'd appreciate it if you could pitch in and Venmo $10 to @Douglas-Qian 🙏
+
+Enjoy the rest of your weekend! See you soon...
+
+1329 SVN
+"""
+
+    for user in CustomUser.objects.all():
+        send_sms(user.phone, msg)
+
+    return HttpResponse("test response")
