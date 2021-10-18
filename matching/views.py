@@ -432,7 +432,18 @@ Enjoy the rest of your weekend! See you soon...
 1329 SVN
 """
 
+    found_invalid = False
+
     for user in CustomUser.objects.all():
-        send_sms(user.phone, msg)
+        if user.phone == "764964943794":
+            found_invalid = True
+
+        if not found_invalid:
+            continue
+        
+        try:
+            send_sms(user.phone, msg)
+        except:
+            print(f"Failed to send msg to {user.phone}")
 
     return HttpResponse("test response")
